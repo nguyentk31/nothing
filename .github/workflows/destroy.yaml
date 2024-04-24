@@ -6,7 +6,7 @@ on:
       
 env:
   CONFIG_DIRECTORY: "./"
-  TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+  # TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
 
 jobs:
   Terraform:
@@ -27,9 +27,23 @@ jobs:
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
     
       - name: Terraform Init
-        id: init
         run: terraform init
+      
+      - name: Setup environment
+        env:
+          branch: ${{ github.ref_name }}
+        id: setup-env
+        run: |
+          if [[ $branch == "main" ]]; then
+          env="prod"
+          elif [[ $branch == "dev" ]]; then
+          env="dev"
+          else
+          env="nothing"
+          fi
+          echo "environment=$env" >> $GITHUB_OUTPUT
   
       - name: Terraform Apply
-        id: apply
+        env:
+          TF_CLI_ARGS_apply: -var-file=./environments/${{ steps.setup-env.outputs.environment }}/terraform.tfvars
         run: terraform apply -destroy -auto-approve -no-color

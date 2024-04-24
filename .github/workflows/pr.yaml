@@ -5,10 +5,11 @@ on:
   pull_request:
     branches:
       - main
+      - dev
       
 env:
   CONFIG_DIRECTORY: "./"
-  TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+  # TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
 
 jobs:
   Terraform:
@@ -30,10 +31,28 @@ jobs:
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
     
       - name: Terraform Init
-        id: init
         run: terraform init
+      
+      - name: Setup environment
+        env:
+          branch: ${{ github.base_ref }}
+        id: setup-env
+        run: |
+          if [[ $branch == "main" ]]; then
+          env="prod"
+          elif [[ $branch == "dev" ]]; then
+          env="dev"
+          else
+          env="nothing"
+          fi
+          echo "environment=$env" >> $GITHUB_OUTPUT
+      
+      - name: Terraform Validate
+        run: terraform validate -no-color
   
       - name: Terraform Plan
+        env:
+          TF_CLI_ARGS_plan: -var-file=./environments/${{ steps.setup-env.outputs.environment }}/terraform.tfvars
         id: plan
         run: |
           terraform plan -no-color > output
@@ -46,7 +65,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const output = `#### Run-link: ${{ steps.plan.outputs.run_link }}
-            #### Something: \`${{ steps.plan.outputs.plan }}\``;
+            #### Summary: \`${{ steps.plan.outputs.plan }}\``;
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
