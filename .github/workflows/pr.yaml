@@ -36,8 +36,11 @@ jobs:
       - name: Terraform Plan
         id: plan
         run: |
-          terraform plan -no-color > outf
-          echo "f=$(cat outf)" >> $GITHUB_OUTPUT
+          {
+            echo 'Ofile<<EOF'
+            terraform plan -no-color
+            echo EOF 
+          } >> $GITHUB_OUTPUT
 
       - name: Write pull request comment
         uses: actions/github-script@v6
