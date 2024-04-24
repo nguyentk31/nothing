@@ -24,7 +24,7 @@ resource "aws_vpc" "main-vpc" {
 # Subnet expand network bit by 5 (like from /16 to /21)
 # Public Subnets
 resource "aws_subnet" "public-subnets" {
-  count                   = var.number_public_subnets_per_az * length(data.aws_availability_zones.azs)
+  count                   = var.number_public_subnets_per_az * var.number_availability_zones
   vpc_id                  = aws_vpc.main-vpc.id
   cidr_block              = cidrsubnet(var.vpc_cidr, 5, count.index)
   availability_zone       = data.aws_availability_zones.azs.names[count.index % length(data.aws_availability_zones.azs.names)]
@@ -39,7 +39,7 @@ resource "aws_subnet" "public-subnets" {
 
 # Private Subnets
 resource "aws_subnet" "private-subnets" {
-  count             = var.number_private_subnets_per_az * length(data.aws_availability_zones.azs)
+  count             = var.number_private_subnets_per_az * var.number_availability_zones
   vpc_id            = aws_vpc.main-vpc.id
   cidr_block        = cidrsubnet(var.vpc_cidr, 5, count.index + var.number_public_subnets_per_az)
   availability_zone = data.aws_availability_zones.azs.names[count.index % length(data.aws_availability_zones.azs.names)]
