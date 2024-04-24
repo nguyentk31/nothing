@@ -1,4 +1,4 @@
-name: Terraform
+name: Terraform Apply
 run-name: ${{ github.actor }} pushed to ${{ github.ref_name }} 🧨
 
 on: 

@@ -1,4 +1,4 @@
-name: Terraform
+name: Terraform Plan
 run-name: ${{ github.actor }} created pull request from ${{ github.head_ref }} to ${{ github.base_ref }} 🧨
 
 on: 
@@ -36,22 +36,20 @@ jobs:
       - name: Terraform Plan
         id: plan
         run: |
-          {
-            echo 'Ofile<<EOF'
-            terraform plan -no-color
-            echo EOF 
-          } >> $GITHUB_OUTPUT
+          terraform plan -no-color > output
+          echo 'run-link=${grep 'To view this run in a browser, visit:' -A1 | grep -v 'To view this run in a browser, visit:' output}' >> $GITHUB_OUTPUT
+          echo 'plan=${grep '^Plan:.*to add,.*to change,.*to destroy.' output}' >> $GITHUB_OUTPUT
 
       - name: Write pull request comment
         uses: actions/github-script@v6
-        env: 
-          MULTILINE_VALUE: ${{ steps.plan.outputs.Ofile }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const output = '### Run link: \'${{ steps.plan.outputs.run-link }}\'
+            ### Plan: \'${{ steps.plan.outputs.plan }}\'';
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: process.env.MULTILINE_VALUE
+              body: output
             })
