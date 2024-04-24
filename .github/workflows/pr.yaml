@@ -37,7 +37,7 @@ jobs:
         id: plan
         run: |
           terraform plan -no-color > output
-          echo "run_link=$(grep 'To view this run in a browser, visit:' -A1 | grep -v 'To view this run in a browser, visit:' output)"" >> $GITHUB_OUTPUT
+          echo "run_link=$(grep 'To view this run in a browser, visit:' -A1 | grep -v 'To view this run in a browser, visit:' output)" >> $GITHUB_OUTPUT
           echo "plan=$(grep '^Plan:.*to add,.*to change,.*to destroy.' output)" >> $GITHUB_OUTPUT
 
       - name: Write pull request comment
