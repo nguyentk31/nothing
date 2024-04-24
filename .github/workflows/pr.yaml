@@ -37,19 +37,11 @@ jobs:
         id: plan
         run: |
           terraform plan -no-color > output
-          {
-            echo 'run_link<<EOF'
-            grep 'To view this run in a browser, visit:' -A1 | grep -v 'To view this run in a browser, visit:' output
-            echo EOF 
-          } >> $GITHUB_OUTPUT
-          {
-            echo 'plan<<EOF'
-            grep '^Plan:.*to add,.*to change,.*to destroy.' output
-            echo EOF 
-          } >> $GITHUB_OUTPUT
+          echo "run_link=$(grep '^To view this run in a browser, visit:' -A1 output | grep -v '^To view this run in a browser, visit:' | tr -d '\012\015')" >> $GITHUB_OUTPUT
+          echo "plan=$(grep -E '^(Plan:|No changes.)' output | tr -d '\012\015')" >> $GITHUB_OUTPUT
 
       - name: Write pull request comment
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
