@@ -56,7 +56,7 @@ jobs:
         run: |
           terraform plan -no-color > output
           echo "run_link=$(grep '^To view this run in a browser, visit:' -A1 output | grep -v '^To view this run in a browser, visit:' | tr -d '\012\015')" >> $GITHUB_OUTPUT
-          echo "plan=$(grep -E '^(Plan:|No changes.)' output | tr -d '\012\015')" >> $GITHUB_OUTPUT
+          echo "summary=$(grep -E '^(Plan:|No changes.)' output | tr -d '\012\015')" >> $GITHUB_OUTPUT
 
       - name: Write pull request comment
         uses: actions/github-script@v7
@@ -64,7 +64,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const output = `#### Run-link: ${{ steps.plan.outputs.run_link }}
-            #### Summary: \`${{ steps.plan.outputs.plan }}\``;
+            #### Summary: \`${{ steps.plan.outputs.summary }}\``;
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
