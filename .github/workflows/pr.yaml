@@ -47,7 +47,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const output = ${{ steps.plan.outputs.f }}
+            const output = ${{ steps.plan.outputs.Ofile }}
       
             github.rest.issues.createComment({
               issue_number: context.issue.number,
