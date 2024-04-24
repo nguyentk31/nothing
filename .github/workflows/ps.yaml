@@ -55,4 +55,4 @@ jobs:
         run: |
           terraform apply -auto-approve -no-color > output
           echo "Run link: $(grep '^To view this run in a browser, visit:' -A1 output | grep -v '^To view this run in a browser, visit:' | tr -d '\012\015')"
-          echo "Summary: $(grep -E '^Apply complete!' output | tr -d '\012\015')"
+          echo "Summary: $(grep -E '^(Apply complete!|No changes.)' output | tr -d '\012\015')"
