@@ -41,7 +41,7 @@ resource "aws_subnet" "public-subnets" {
 resource "aws_subnet" "private-subnets" {
   count             = var.number_private_subnets_per_az * var.number_availability_zones
   vpc_id            = aws_vpc.main-vpc.id
-  cidr_block        = cidrsubnet(var.vpc_cidr, 5, count.index + var.number_public_subnets_per_az)
+  cidr_block        = cidrsubnet(var.vpc_cidr, 5, count.index + length(aws_subnet.public-subnets))
   availability_zone = data.aws_availability_zones.azs.names[count.index % length(data.aws_availability_zones.azs.names)]
 
   tags = {
