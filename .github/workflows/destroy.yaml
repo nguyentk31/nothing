@@ -40,9 +40,10 @@ jobs:
           env="dev"
           else
           env="nothing"
-          echo"env=$(env)" >> $GITHUB_OUTPUT
+          fi
+          echo "environment=$env" >> $GITHUB_OUTPUT
   
       - name: Terraform Apply
         env:
-          TF_CLI_ARGS_apply: -var-file=../environments/${{ steps.setup-env.outputs.env }}/terraform.tfvars
+          TF_CLI_ARGS_apply: -var-file=../environments/${{ steps.setup-env.outputs.environment }}/terraform.tfvars
         run: terraform apply -destroy -auto-approve -no-color

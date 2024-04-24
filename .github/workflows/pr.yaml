@@ -44,14 +44,15 @@ jobs:
           env="dev"
           else
           env="nothing"
-          echo"env=$(env)" >> $GITHUB_OUTPUT
+          fi
+          echo "environment=$env" >> $GITHUB_OUTPUT
       
       - name: Terraform Validate
         run: terraform validate -no-color
   
       - name: Terraform Plan
         env:
-          TF_CLI_ARGS_plan: -var-file=../environments/${{ steps.setup-env.outputs.env }}/terraform.tfvars
+          TF_CLI_ARGS_plan: -var-file=../environments/${{ steps.setup-env.outputs.environment }}/terraform.tfvars
         id: plan
         run: |
           terraform plan -no-color > output
