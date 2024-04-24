@@ -1,6 +1,4 @@
 terraform {
-  required_version = "1.8.1"
-
   # cloud config
   cloud {
     organization = "ogn-tmp"
@@ -10,6 +8,7 @@ terraform {
     }
   }
 
+  # provider config
   required_providers {
     aws = {
       source  = "hashicorp/aws"
