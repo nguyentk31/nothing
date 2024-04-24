@@ -1,0 +1,54 @@
+name: Terraform Apply
+run-name: ${{ github.actor }} pushed to ${{ github.ref_name }} 🧨
+
+on: 
+  pull_request:
+    branches:
+      - main
+      
+env:
+  CONFIG_DIRECTORY: "./"
+  TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+
+jobs:
+  Terraform:
+    name: "Terraform Run"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: ${{ env.CONFIG_DIRECTORY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.1
+
+      - name: Setup Terraform with specified version on the runner
+        uses: hashicorp/setup-terraform@v3
+        with:
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+    
+      - name: Terraform Init
+        id: init
+        run: terraform init
+  
+      - name: Terraform Plan
+        id: plan
+        run: |
+          echo "VAR=$(terraform plan -no-color)" >> $GITHUB_OUTPUT
+
+      - name: Write pull request comment
+        uses: actions/github-script@v6
+        env:
+          PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = ${{ steps.plan.outputs.VAR }}
+      
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
