@@ -1,5 +1,5 @@
-name: Terraform Apply
-run-name: ${{ github.actor }} pushed to ${{ github.ref_name }} 🧨
+name: Terraform
+run-name: ${{ github.actor }} created pull request from ${{ github.head_ref }} to ${{ github.base_ref }} 🧨
 
 on: 
   pull_request:
@@ -12,10 +12,11 @@ env:
 
 jobs:
   Terraform:
-    name: "Terraform Run"
+    name: "Terraform"
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      pull-requests: write
     defaults:
       run:
         working-directory: ${{ env.CONFIG_DIRECTORY }}
