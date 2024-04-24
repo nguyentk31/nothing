@@ -1,4 +1,4 @@
-name: Terraform
+name: Terraform Destroy
 run-name: ${{ github.actor }} destroy 🧨
 
 on: 
