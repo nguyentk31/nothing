@@ -39,7 +39,7 @@ jobs:
           terraform plan -no-color > output
           {
             echo 'run_link<<EOF'
-            grep 'To view this run in a browser, visit:' -A1 | grep -v 'To view this run in a browser, visit:' output
+            grep 'To view this run in a browser, visit:' -A1 output | grep -v 'To view this run in a browser, visit:'
             echo EOF 
           } >> $GITHUB_OUTPUT
           {
