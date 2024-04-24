@@ -39,7 +39,7 @@ jobs:
           terraform plan -no-color > output
           {
             echo 'run_link<<EOF'
-            grep 'To view this run in a browser, visit:' -A1 output | grep -v 'To view this run in a browser, visit:'
+            grep '^To view this run in a browser, visit:' -A1 output
             echo EOF 
           } >> $GITHUB_OUTPUT
           {
@@ -49,7 +49,7 @@ jobs:
           } >> $GITHUB_OUTPUT
 
       - name: Write pull request comment
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
