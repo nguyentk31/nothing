@@ -52,7 +52,7 @@ jobs:
   
       - name: Terraform Plan
         env:
-          TF_CLI_ARGS_plan: -var-file=../environments/${{ steps.setup-env.outputs.environment }}/terraform.tfvars
+          TF_CLI_ARGS_plan: -var-file=./environments/${{ steps.setup-env.outputs.environment }}/terraform.tfvars
         id: plan
         run: |
           terraform plan -no-color > output

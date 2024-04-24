@@ -52,5 +52,5 @@ jobs:
   
       - name: Terraform Apply
         env:
-          TF_CLI_ARGS_apply: -var-file=../environments/${{ steps.setup-env.outputs.environment }}/terraform.tfvars
+          TF_CLI_ARGS_apply: -var-file=./environments/${{ steps.setup-env.outputs.environment }}/terraform.tfvars
         run: terraform apply -auto-approve -no-color
