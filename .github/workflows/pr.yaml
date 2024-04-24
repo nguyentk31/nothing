@@ -46,7 +46,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const output = '#### Run-link: \'${{ steps.plan.outputs.run_link }}\'
-            #### ${{ steps.plan.outputs.plan }}';
+            #### Something: ${{ steps.plan.outputs.plan }}';
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
