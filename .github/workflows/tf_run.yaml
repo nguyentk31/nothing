@@ -11,13 +11,13 @@ on:
       - main
       - dev
     paths:
-      - './'
+      - './**'
   pull_request:
     branches:
       - main
       - dev
     paths:
-      - './'
+      - './**'
   workflow_dispatch:
       
 env:
