@@ -36,7 +36,7 @@ variable "number_public_subnets_per_az" {
   type        = number
   description = "Number of Public Subnets per AZ"
   validation {
-    condition     = var.number_public_subnets_per_az < 2
+    condition     = var.number_public_subnets_per_az <= 1
     error_message = "Number of Public Subnets is too large"
   }
 }
@@ -45,7 +45,7 @@ variable "number_private_subnets_per_az" {
   type        = number
   description = "Number of Private Subnets per AZ"
   validation {
-    condition     = var.number_private_subnets_per_az < 3
+    condition     = var.number_private_subnets_per_az <= 2
     error_message = "Number of Private Subnets is too large"
   }
 }
