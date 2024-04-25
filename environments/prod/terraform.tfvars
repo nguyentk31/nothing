@@ -5,7 +5,7 @@ aws_region  = "us-east-1"
 
 # VPC module's variables
 vpc_config = {
-  cidr_block                    = "10.1.0.0/16"
+  cidr_block                    = "10.2.0.0/16"
   enable_dns_support            = true
   enable_dns_hostnames          = true
   number_availability_zones     = 2
