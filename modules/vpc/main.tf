@@ -27,7 +27,7 @@ resource "aws_subnet" "public-subnets" {
   count                   = var.number_public_subnets_per_az * var.number_availability_zones
   vpc_id                  = aws_vpc.main-vpc.id
   cidr_block              = cidrsubnet(var.vpc_cidr, 5, count.index)
-  availability_zone       = data.aws_availability_zones.azs.names[count.index % length(data.aws_availability_zones.azs.names)]
+  availability_zone       = data.aws_availability_zones.azs.names[count.index % var.number_availability_zones]
   map_public_ip_on_launch = true
 
   tags = {
@@ -42,7 +42,7 @@ resource "aws_subnet" "private-subnets" {
   count             = var.number_private_subnets_per_az * var.number_availability_zones
   vpc_id            = aws_vpc.main-vpc.id
   cidr_block        = cidrsubnet(var.vpc_cidr, 5, count.index + length(aws_subnet.public-subnets))
-  availability_zone = data.aws_availability_zones.azs.names[count.index % length(data.aws_availability_zones.azs.names)]
+  availability_zone = data.aws_availability_zones.azs.names[count.index % var.number_availability_zones]
 
   tags = {
     Name        = "${aws_vpc.main-vpc.tags.Name}-PrivateSubnet-${count.index + 1}"
@@ -62,22 +62,24 @@ resource "aws_internet_gateway" "igw" {
   }
 }
 
-resource "aws_eip" "natgw-eip" {
+resource "aws_eip" "natgw-eips" {
+  count      = var.number_nat_gateway
   depends_on = [aws_internet_gateway.igw]
 
   tags = {
-    Name        = "${aws_vpc.main-vpc.tags.Name}-ElasticIP"
+    Name        = "${aws_vpc.main-vpc.tags.Name}-ElasticIP${count.index+1}"
     Project     = var.project
     Environment = var.environment
   }
 }
 
-resource "aws_nat_gateway" "natgw" {
-  allocation_id = aws_eip.natgw-eip.id
-  subnet_id     = aws_subnet.public-subnets[0].id // The first public subnet
+resource "aws_nat_gateway" "natgws" {
+  count         = var.number_nat_gateway
+  allocation_id = aws_eip.natgw-eips[count.index].id
+  subnet_id     = aws_subnet.public-subnets[count.index].id // The first public subnet
 
   tags = {
-    Name        = "${aws_vpc.main-vpc.tags.Name}-NatGateway"
+    Name        = "${aws_vpc.main-vpc.tags.Name}-NatGateway${count.index+1}"
     Project     = var.project
     Environment = var.environment
   }
@@ -107,21 +109,24 @@ resource "aws_route_table_association" "pub-rt-association" {
 }
 
 # Private route tables
-resource "aws_route_table" "pri-rt" {
+resource "aws_route_table" "pri-rts" {
+  count  = var.number_nat_gateway
   vpc_id = aws_vpc.main-vpc.id
 
   route {
     cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.natgw.id
+    nat_gateway_id = aws_nat_gateway.natgws[count.index].id
   }
 
   tags = {
-    Name = "${aws_vpc.main-vpc.tags.Name}-PrivateRouteTable"
+    Name = "${aws_vpc.main-vpc.tags.Name}-PrivateRouteTable${count.index+1}"
+    Project     = var.project
+    Environment = var.environment
   }
 }
 
 resource "aws_route_table_association" "pri-rt-association" {
   count          = length(aws_subnet.private-subnets)
-  route_table_id = aws_route_table.pri-rt.id
+  route_table_id = aws_route_table.pri-rts[count.index % var.number_nat_gateway].id
   subnet_id      = aws_subnet.private-subnets[count.index].id
 }

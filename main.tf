@@ -13,4 +13,5 @@ module "vpc" {
   number_availability_zones     = var.vpc_config.number_availability_zones
   number_public_subnets_per_az  = var.vpc_config.number_public_subnets_per_az
   number_private_subnets_per_az = var.vpc_config.number_private_subnets_per_az
+  number_nat_gateway            = var.vpc_config.number_nat_gateway
 }

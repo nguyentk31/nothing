@@ -49,3 +49,12 @@ variable "number_private_subnets_per_az" {
     error_message = "Number of Private Subnets is too large"
   }
 }
+
+variable "number_nat_gateway" {
+  type        = number
+  description = "Number of Nat Gateway"
+  validation {
+    condition     = var.number_nat_gateway <= 3
+    error_message = "Number of Nat Gateway is too large"
+  }
+}
