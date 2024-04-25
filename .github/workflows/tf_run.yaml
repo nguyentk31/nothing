@@ -31,8 +31,8 @@ jobs:
       run:
         working-directory: ${{ env.CONFIG_DIRECTORY }}
     env:
-      branch: ${{ github.ref_name || github.base_ref }}
       event: ${{ github.event_name }}
+      branch: ${{ github.event_name == 'push' && github.ref_name || github.event_name == 'pull_request' && github.base_ref }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4.1.1
@@ -44,13 +44,12 @@ jobs:
       
       - name: Setup environment
         env:
-          test1: ${{ github.ref_name || github.base_ref }}
           test2: ${{ github.ref_name}}
           test3: ${{ github.base_ref }}
           test4: ${{ github.head_ref }}
           test5: ${{ github.event_name }}
         run: |
-          echo $test1
+          echo $branch
           echo $test2
           echo $test3
           echo $test4
