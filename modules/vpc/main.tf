@@ -67,7 +67,7 @@ resource "aws_eip" "natgw-eips" {
   depends_on = [aws_internet_gateway.igw]
 
   tags = {
-    Name        = "${aws_vpc.main-vpc.tags.Name}-ElasticIP${count.index+1}"
+    Name        = "${aws_vpc.main-vpc.tags.Name}-ElasticIP${count.index + 1}"
     Project     = var.project
     Environment = var.environment
   }
@@ -79,7 +79,7 @@ resource "aws_nat_gateway" "natgws" {
   subnet_id     = aws_subnet.public-subnets[count.index].id // The first public subnet
 
   tags = {
-    Name        = "${aws_vpc.main-vpc.tags.Name}-NatGateway${count.index+1}"
+    Name        = "${aws_vpc.main-vpc.tags.Name}-NatGateway${count.index + 1}"
     Project     = var.project
     Environment = var.environment
   }
@@ -119,7 +119,7 @@ resource "aws_route_table" "pri-rts" {
   }
 
   tags = {
-    Name = "${aws_vpc.main-vpc.tags.Name}-PrivateRouteTable${count.index+1}"
+    Name        = "${aws_vpc.main-vpc.tags.Name}-PrivateRouteTable${count.index + 1}"
     Project     = var.project
     Environment = var.environment
   }
