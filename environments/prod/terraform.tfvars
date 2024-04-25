@@ -13,3 +13,65 @@ vpc_config = {
   number_private_subnets_per_az = 1
   number_nat_gateway            = 2
 }
+
+# IAM module's variables
+# github_account_id = "992382851936" # Github-actions user id
+github_account_id = "637423337672" # Learner-lab
+
+eks_cluster_roles = {
+  EKSClusterRole = {
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = ["sts:AssumeRole"]
+        Effect = "Allow"
+        Principal = {
+          Service = "eks.amazonaws.com"
+        }
+      },
+    ]
+  }
+  EKSNodeGroupRole = {
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = ["sts:AssumeRole"]
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      },
+    ]
+  }
+  EKSPodRole = {
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = ["sts:AssumeRole", "sts:TagSession"]
+        Effect = "Allow"
+        Principal = {
+          Service = "pods.eks.amazonaws.com"
+        }
+      },
+    ]
+  }
+}
+
+eks_policy_attachments = [
+  {
+    role_name  = "EKSClusterRole"
+    policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+  },
+  {
+    role_name  = "EKSNodeGroupRole"
+    policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  },
+  {
+    role_name  = "EKSNodeGroupRole"
+    policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  },
+  {
+    role_name  = "EKSPodRole"
+    policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  },
+]
