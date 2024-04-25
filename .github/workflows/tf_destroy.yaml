@@ -1,5 +1,5 @@
 name: Terraform Destroy
-run-name: ${{ github.actor }} destroy 💥
+run-name: ${{ github.actor }} destroy branch ${{ github.ref_name }}💥
 
 on:
   workflow_dispatch:

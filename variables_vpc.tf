@@ -6,5 +6,11 @@ variable "vpc_config" {
     number_availability_zones     = optional(number, 3),             # Number of Availability Zones (AZs)
     number_public_subnets_per_az  = optional(number, 1),             # Number of Availability Zones (AZs)
     number_private_subnets_per_az = optional(number, 1),             # Number of Availability Zones (AZs)
+    number_nat_gateway            = optional(number, 1),             # Number of Nat Gateway
   })
+
+  validation {
+    condition     = var.vpc_config.number_nat_gateway <= var.vpc_config.number_availability_zones * var.vpc_config.number_public_subnets_per_az
+    error_message = "Number of nat gateway is too large"
+  }
 }
