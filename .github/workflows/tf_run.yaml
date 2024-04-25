@@ -43,7 +43,18 @@ jobs:
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
       
       - name: Setup environment
+        env:
+          test1: ${{ github.ref_name || github.base_ref }}
+          test2: ${{ github.ref_name}}
+          test3: ${{ github.base_ref }}
+          test4: ${{ github.head_ref }}
+          test5: ${{ github.event_name }}
         run: |
+          echo $test1
+          echo $test2
+          echo $test3
+          echo $test4
+          echo $test5
           if [[ $branch == "main" ]]; then
           workspace="prod"
           else
