@@ -4,7 +4,6 @@ terraform {
     organization = "ogn-tmp"
     workspaces {
       project = "prj-tmp"
-      name    = "ws-tmp"
     }
   }
 

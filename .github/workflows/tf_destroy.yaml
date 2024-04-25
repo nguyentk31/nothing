@@ -1,0 +1,55 @@
+name: Terraform Destroy
+run-name: ${{ github.actor }} destroy 💥
+
+on:
+  workflow_dispatch:
+      
+env:
+  CONFIG_DIRECTORY: "./"
+
+jobs:
+  Terraform:
+    name: "Terraform Destroy"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: ${{ env.CONFIG_DIRECTORY }}
+    env:
+      branch: ${{ github.ref_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.1
+
+      - name: Setup Terraform with specified version on the runner
+        uses: hashicorp/setup-terraform@v3
+        with:
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+      
+      - name: Setup environment
+        run: |
+          if [[ $branch == "main" ]]; then
+          workspace="prod"
+          else
+          workspace="dev"
+          fi
+          args="-destroy -out plan -var-file=./environments/$workspace/terraform.tfvars"
+
+          echo "TF_CLI_ARGS_plan=$args" >> $GITHUB_ENV
+          echo "TF_WORKSPACE=$workspace" >> $GITHUB_ENV
+    
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        run: |
+          terraform plan -no-color > output
+          echo "Run link: $(grep '^To view this run in a browser, visit:' -A1 output | grep -v '^To view this run in a browser, visit:' | tr -d '\012\015')"
+          echo "Summary: $(grep -E '^(Plan:|No changes.)' output | tr -d '\012\015')"
+          
+      - name: Terraform Apply
+        run: |
+          terraform apply plan -no-color > output
+          echo "Run link: $(grep '^To view this run in a browser, visit:' -A1 output | grep -v '^To view this run in a browser, visit:' | tr -d '\012\015')"
+          echo "Summary: $(grep -E '^(Apply complete!|No changes.)' output | tr -d '\012\015')"
