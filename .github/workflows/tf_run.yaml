@@ -1,10 +1,10 @@
 name: Terraform Run
 run-name: >-
-  if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-  "${{ github.actor }} created pull request from: ${{ github.head_ref }} to: ${{ github.base_ref }}."
-  else
-  "${{ github.actor }} pushed to: ${{ github.ref_name }}."
-  fi
+  ${{ github.event_name == 'pull_request' &&
+  format('{0} created pull request from: {1} to: {2}.',
+  github.actor, github.head_ref, github.base_ref) ||
+  format('{0} pushed to: {1}.',
+  github.actor, github.ref_name) }}
 
 on:
   push:
