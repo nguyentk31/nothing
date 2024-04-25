@@ -31,7 +31,7 @@ jobs:
       run:
         working-directory: ${{ env.CONFIG_DIRECTORY }}
     env:
-      branch: ${{ github.ref_name }}
+      branch: ${{ github.ref_name || github.base_ref }}
       event: ${{ github.event_name }}
     steps:
       - name: Checkout
