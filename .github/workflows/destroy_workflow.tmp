@@ -1,0 +1,100 @@
+name: destroy workflow
+run-name: ${{ github.actor }} destroy branch ${{ github.ref_name }}💥
+
+on:
+  workflow_dispatch:
+      
+env:
+  TF_CLOUD_ORGANIZATION: DACN
+  TF_CLOUD_PROJECT: UIT
+  environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
+  app_path: application
+  infra_path: infrastructure
+
+jobs:
+  app_destroy:
+    name: Destroy application
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.app_path }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.1
+
+      - name: Setup Terraform with specified version on the runner
+        uses: hashicorp/setup-terraform@v3
+        with:
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Terraform Init
+        env:
+          TF_WORKSPACE: ${{ format('app-{0}', env.environment) }}
+        run: |
+          terraform init
+
+      - name: Terraform Plan
+        env:
+          TF_WORKSPACE: ${{ format('app-{0}', env.environment) }}
+        id: plan
+        run: |
+          terraform plan -no-color -destroy -out plan.json > .output
+          url=$(grep '^To view this run' -A1 .output | grep -v '^To view this run' | tr -d '\012\015')
+          sm=$(grep -E '^(Plan:|No changes.)' .output | tr -d '\012\015')
+          echo "Run link: $url"
+          echo "Summary: $sm"
+          
+          echo "summary=$sm" >> $GITHUB_OUTPUT
+          
+      - name: Terraform Apply
+        env:
+          TF_WORKSPACE: ${{ format('app-{0}', env.environment) }}
+        if: ${{ !startsWith(steps.plan.outputs.summary, 'No changes.') }}
+        run: |
+          terraform apply plan.json -no-color > output
+          echo "Run link: $(grep '^To view this run' -A1 output | grep -v '^To view this run' | tr -d '\012\015')"
+          echo "Summary: $(grep -E '^(Apply complete!|No changes.)' output | tr -d '\012\015')"
+
+  infra_destroy:
+    name: Destroy infrastructure
+    needs: app_destroy
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.infra_path }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.1
+
+      - name: Setup Terraform with specified version on the runner
+        uses: hashicorp/setup-terraform@v3
+        with:
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Terraform Init
+        env:
+          TF_WORKSPACE: ${{ format('infra-{0}', env.environment) }}
+        run: |
+          terraform init
+
+      - name: Terraform Plan
+        env:
+          TF_WORKSPACE: ${{ format('infra-{0}', env.environment) }}
+        id: plan
+        run: |
+          terraform plan -no-color -destroy -out plan.json -var-file=./environments/$environment/terraform.tfvars > .output
+          url=$(grep '^To view this run' -A1 .output | grep -v '^To view this run' | tr -d '\012\015')
+          sm=$(grep -E '^(Plan:|No changes.)' .output | tr -d '\012\015')
+          echo "Run link: $url"
+          echo "Summary: $sm"
+          
+          echo "summary=$sm" >> $GITHUB_OUTPUT
+          
+      - name: Terraform Apply
+        env:
+          TF_WORKSPACE: ${{ format('infra-{0}', env.environment) }}
+        if: ${{ !startsWith(steps.plan.outputs.summary, 'No changes.') }}
+        run: |
+          terraform apply plan.json -no-color > output
+          echo "Run link: $(grep '^To view this run' -A1 output | grep -v '^To view this run' | tr -d '\012\015')"
+          echo "Summary: $(grep -E '^(Apply complete!|No changes.)' output | tr -d '\012\015')"
