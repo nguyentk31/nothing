@@ -1,4 +1,2 @@
-.terraform*
-
-output.txt
-plan.json
+api.txt
+.terraform/
