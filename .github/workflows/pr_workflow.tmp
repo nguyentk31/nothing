@@ -1,0 +1,324 @@
+name: pull request workflow
+run-name: ${{ github.actor }} / ${{ github.event.pull_request.title  }}  🚩
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+    types: [opened, reopened]
+   
+env:
+  TF_CLOUD_ORGANIZATION: DACN
+  TF_CLOUD_PROJECT: UIT
+  TF_CLI_ARGS: -no-color
+  branch: ${{ github.base_ref }}
+  environment: ${{ github.base_ref == 'main' && 'prod' || 'dev' }}
+  app_path: application
+  infra_path: infrastructure
+
+jobs:
+  # Find file paths that trigger workflow
+  changed_files:
+    name: Find file paths
+    runs-on: ubuntu-latest
+    # Outputs find paths found to other jobs
+    outputs:
+      app: ${{ steps.check.outputs.test_app }}
+      infra: ${{ steps.check.outputs.test_infra }}
+      charts: ${{ steps.check.outputs.charts }}
+      images: ${{ steps.check.outputs.images }}
+    env:
+      paths_check: application infrastructure charts images
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4.1.1
+        with:
+          fetch-depth: 0
+      - name: Get changed files
+        id: get-files
+        run: |
+          # Using git diff to compare sha between the current commit and the base branch of pull request
+          echo "files=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | xargs)" >> $GITHUB_OUTPUT
+      - name: Check images/charts path
+        id: check
+        run: |
+          echo 'Files changed: ${{ steps.get-files.outputs.files }}'
+          # Check whether images path changed
+          for path in $paths_check; do
+            if grep -qE "(^| )$path/.*" <<< "${{ steps.get-files.outputs.files }}";then
+              echo "$path=true" >> $GITHUB_OUTPUT
+              echo "$path changed"
+            else
+              echo "$path=false" >> $GITHUB_OUTPUT
+              echo "$path not changed"
+            fi
+          done
+
+  # Plan for infrastructure implement
+  infra_plan:
+    name: Infrastructure planning
+    runs-on: ubuntu-latest
+    # Output plan result to write comment
+    outputs:
+      run-url: ${{ steps.plan.outputs.run-url }}
+      summary: ${{ steps.plan.outputs.summary }}
+    defaults:
+      run:
+        working-directory: ${{ env.infra_path }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4.1.1
+        with:
+          fetch-depth: 1
+      - name: Setup Terraform with specified version on the runner
+        uses: hashicorp/setup-terraform@v3
+        with:
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Terraform Init
+        env:
+          TF_WORKSPACE: ${{ format('infra-{0}', env.environment) }}
+        run: |
+          terraform init
+          echo "TF_WORKSPACE=$TF_WORKSPACE" >> $GITHUB_ENV
+    
+      - name: Terraform plan
+        id: plan
+        run: |
+          terraform plan -var-file=./environments/$environment/terraform.tfvars > .plan_output
+
+          # Grep the run-url and plan summary lines then save to step outputs
+          url=$(grep '^To view this run' -A1 .plan_output | grep -v '^To view this run' | tr -d '\012\015')
+          sm=$(grep -E '^(Plan:|No changes.)' .plan_output | tr -d '\012\015')
+          echo "run-url=$url" >> $GITHUB_OUTPUT
+          echo "summary=$sm" >> $GITHUB_OUTPUT
+
+  # Plan for application deployment
+  deploy_plan:
+    name: Deployment planning
+    needs: changed_files
+    runs-on: ubuntu-latest
+    # Output plan result to write comment
+    outputs:
+      run-url: ${{ steps.plan.outputs.run-url }}
+      summary: ${{ steps.plan.outputs.summary }}
+      cluster-built: ${{ steps.get-outputs.outputs.cluster_built }}
+    defaults:
+      run:
+        working-directory: ${{ env.app_path }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.1
+        with:
+          fetch-depth: 1
+      - name: Setup Terraform with specified version on the runner
+        uses: hashicorp/setup-terraform@v3
+        with:
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      # Get infrastructure implementation outputs for deployment planning
+      - name: Get infrastructure outputs
+        id: get-outputs
+        working-directory: ${{ env.infra_path }}
+        env:
+          TF_WORKSPACE: ${{ format('infra-{0}', env.environment) }}
+        run: |
+          # set +e to continue even if exit code != 0
+          set +e
+          terraform init > .nothing
+          terraform output > infra_outputs_file 2>.err
+
+          # Check if exit code != 0 or no outputs then notify "cluster has not been built"
+          # Otherwise save infrastructer outputs to step outputs for next step
+          if [ $? -ne 0 ] || grep -q "No outputs found" infra_outputs_file;then
+            echo "cluster_built=false" >> $GITHUB_OUTPUT
+            echo "infra has not been built"
+          else
+            echo "infra_outputs=$(cat infra_outputs_file | tr -s '\015\012' ';')" >> $GITHUB_OUTPUT
+            echo "cluster_built=true" >> $GITHUB_OUTPUT
+            echo "infra has been built"
+          fi
+
+      # Write variables from infra outputs for plan in next step
+      - name: Write variable from infra_outputs
+        # Only run if cluster has been built
+        if: ${{ steps.get-outputs.outputs.cluster_built=='true' }}
+        run: |
+          # Write outputs get from step above that match application variable
+          infra_outputs='${{ steps.get-outputs.outputs.infra_outputs }}'
+          vars=$(sed -n 's/^variable "\(.*\)" {$/\1/p' variables.tf)
+          for var in $vars; do
+            echo $infra_outputs | sed -nE "s/(^|.*;)($var.*$)/\2/p" | sed -n "s/;.*//p" >> terraform.tfvars
+          done
+
+      # Write variables from app outputs for plan in next step
+      - name: Write variable from app_outputs
+        # Only run if cluster has been built
+        if: ${{ steps.get-outputs.outputs.cluster_built=='true' }}
+        run: |
+          # set +e to continue even if exit code != 0
+          set +e
+          # Read app deployment ouputs from previous statet if it exits
+          # Otherwise use the default value has been defined in variables.tf files
+          terraform output > app_outputs_file 2>.err
+
+          if [ $? -ne 0 ] || grep -q "No outputs found" app_outputs_file;then
+            echo "app has not been deployed"
+          else
+            echo "app has been deployed"
+            if [[ ${{ needs.changed_files.outputs.images }} == true ]] ;then
+              echo "iamges will change!"
+            else
+              echo "iamges won't change!"
+              value="\"$(terraform output -raw image_tag 2>.err)\""
+              if [ $? -ne 0 ] && grep -q "Output \"image_tag\" not found" .err; then
+                echo "can't find previous image_tag's value"
+              else
+                echo "image_tag = $value" >> terraform.tfvars
+                echo "found previous image_tag's value"
+              fi
+            fi
+
+            if [[ ${{ needs.changed_files.outputs.charts }} == true ]] ;then
+              echo "charts will change!"
+            else
+              echo "charts won't change!"
+              value="\"$(terraform output -raw chart_version 2>.err)\""
+              if [ $? -ne 0 ] && grep -q "Output \"chart_version\" not found" .err; then
+                echo "can't find previous chart_version's value"
+              else
+                echo "chart_version = $value" >> terraform.tfvars
+                echo "found previous chart_version's value"
+              fi
+            fi
+          fi
+
+      - name: Terraform Init
+        env:
+          TF_WORKSPACE: ${{ format('app-{0}', env.environment) }}
+        run: |
+          terraform init
+          echo "TF_WORKSPACE=$TF_WORKSPACE" >> $GITHUB_ENV
+
+      # Run terrraform plan for application deployment
+      - name: Run terraform plan
+        id: plan
+        run: |
+          terraform plan > .plan_output
+          
+          url=$(grep '^To view this run' -A1 .plan_output | grep -v '^To view this run' | tr -d '\012\015')
+          sm=$(grep -E '^(Plan:|No changes.)' .plan_output | tr -d '\012\015')
+          echo "run-url=$url" >> $GITHUB_OUTPUT
+          echo "summary=$sm" >> $GITHUB_OUTPUT
+          echo "Run url: $url"
+          echo "Summary: $sm"
+  
+  chart_testing:
+    name: Deploy chart to kind cluster
+    runs-on: ubuntu-latest
+    needs: changed_files
+    if: ${{ needs.changed_files.outputs.charts=='true' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4.2.0
+        with:
+          version: v3.14.4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+          check-latest: true
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@v2.6.1
+
+      - name: Run chart-testing (list-changed)
+        id: list-changed
+        run: |
+          changed=$(ct list-changed --config ct.yaml --target-branch $branch)
+          if [[ -n "$changed" ]]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run chart-testing (lint)
+        if: steps.list-changed.outputs.changed == 'true'
+        run: ct lint --config ct.yaml --target-branch $branch
+
+      - name: Create kind cluster
+        if: steps.list-changed.outputs.changed == 'true'
+        uses: helm/kind-action@v1.10.0
+      
+      - name: Build Docker image
+        if: steps.list-changed.outputs.changed == 'true'
+        run: docker build -t tmp:tmp images/myimage/
+
+      - name: Load Docker image to kind cluster
+        if: steps.list-changed.outputs.changed == 'true'
+        run: kind load docker-image tmp:tmp --name chart-testing
+
+      - name: Run chart-testing (install)
+        if: steps.list-changed.outputs.changed == 'true'
+        run: ct install --config ct.yaml --target-branch $branch
+    
+  image_testing:
+    runs-on: ubuntu-latest
+    needs: changed_files
+    if: ${{ needs.changed_files.outputs.images=='true' }}
+    defaults:
+      run:
+        working-directory: "images/myimage"
+
+    strategy:
+      matrix:
+        node: [ 16, 18, 20 ]
+    name: Node ${{ matrix.node }} sample
+
+    steps:
+      - uses: actions/checkout@v4.1.1
+        with:
+          fetch-depth: 1
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }} 
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit test
+        run: npm run test
+
+  # Write comment to pull_request about the result of testing and planning jobs
+  comment_writing:
+    name: Write comment to pull_request
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    needs: [ deploy_plan, infra_plan ]
+    steps:
+      - name: Write pull request comment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `#### Plan for application deployment...
+            #### Run-url: ${{ needs.deploy_plan.outputs.run-url }}
+            #### Summary: \`${{ needs.deploy_plan.outputs.summary }}\`
+            -----------------
+            #### Plan for Infrastructure implement...
+            #### Run-url: ${{ needs.infra_plan.outputs.run-url }}
+            #### Summary: \`${{ needs.infra_plan.outputs.summary }}\``;
+
+            github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: output
+            })

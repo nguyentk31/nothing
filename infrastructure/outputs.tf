@@ -1,4 +1,3 @@
-/*
 # Main
 output "aws_region" {
   value       = var.aws_region
@@ -41,7 +40,6 @@ output "alb_sg" {
   value       = module.lbc.alb_sg
   description = "ALB's security group ID"
 }
-*/
 
 # Outputs of ECR module
 output "image_ecr_url" {

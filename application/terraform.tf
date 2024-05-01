@@ -1,11 +1,6 @@
 terraform {
   # cloud config
-  cloud {
-    # organization = "ogn-tmp"
-    # workspaces {
-    #   project = "nothing"
-    # }
-  }
+  cloud {}
 
   # provider config
   required_providers {
