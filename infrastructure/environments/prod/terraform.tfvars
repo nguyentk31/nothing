@@ -1,7 +1,7 @@
 # Main variables
 project     = "myprj"
 environment = "dev"
-aws_region  = "us-east-1"
+aws_region  = "us-west-2"
 
 # VPC module's variables
 vpc_config = {
@@ -22,6 +22,3 @@ service_ipv4_cidr = "10.10.0.0/16"
 # LBC module's variables
 lbc_sa = "aws-load-balancer-controller"
 lbc_namespace = "kube-system"
-
-# ECR module's variables
-github_account_id = "992382851936"

@@ -42,17 +42,16 @@ module "lbc" {
   source = "./modules/lbc"
 
   default_tags      = data.aws_default_tags.uit.tags
-  oidc_provider_url = module.eks.oidc_provider_url
-  oidc_provider_arn = module.eks.oidc_provider_arn
-  lbc_sa            = var.lbc_sa
-  lbc_namespace     = var.lbc_namespace
-  cluster_vpc       = module.vpc.vpc_id
+  cluster_vpc = module.vpc.vpc_id
 }
 
-# Module ECR
-module "ecr" {
-  source = "./modules/ecr"
+# Private ECR Repository
+resource "aws_ecr_repository" "image" {
+  name = "${var.project}-${var.environment}-image-repo"
+  force_delete = true
+}
 
-  default_tags      = data.aws_default_tags.uit.tags
-  github_account_id = var.github_account_id
+resource "aws_ecr_repository" "chart" {
+  name = "${var.project}-${var.environment}-chart-repo"
+  force_delete = true
 }
