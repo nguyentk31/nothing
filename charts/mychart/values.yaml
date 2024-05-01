@@ -5,14 +5,14 @@
 replicaCount: 3
 
 image:
-  repository: ""
-  pullPolicy: Always
+  repository: "tmp"
+  pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: ""
+  tag: "tmp"
 
 imagePullSecrets:
-nameOverride: "apptk"
-fullnameOverride: "my-app"
+nameOverride: "react"
+fullnameOverride: "react-app"
 
 serviceAccount:
   # Specifies whether a service account should be created
@@ -49,8 +49,7 @@ ingress:
   className: "alb"
   annotations: {
     alb.ingress.kubernetes.io/scheme: internet-facing,
-    alb.ingress.kubernetes.io/target-type: ip,
-    alb.ingress.kubernetes.io/security-groups: sg-id
+    alb.ingress.kubernetes.io/target-type: ip
   }
   rules:
     - paths:

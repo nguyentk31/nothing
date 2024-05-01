@@ -24,7 +24,6 @@ provider "helm" {
   }
 }
 
-
 # Using helm to install LBC chart 
 resource "helm_release" "aws-lbc-chart" {
   name       = "aws-load-balancer-controller"

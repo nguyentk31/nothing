@@ -8,8 +8,6 @@ env:
   TF_CLOUD_ORGANIZATION: DACN
   TF_CLOUD_PROJECT: UIT
   environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
-  app_path: application
-  infra_path: infrastructure
 
 jobs:
   app_destroy:
@@ -17,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ${{ env.app_path }}
+        working-directory: test_app
     steps:
       - name: Checkout
         uses: actions/checkout@v4.1.1
@@ -61,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ${{ env.infra_path }}
+        working-directory: test_infra
     steps:
       - name: Checkout
         uses: actions/checkout@v4.1.1

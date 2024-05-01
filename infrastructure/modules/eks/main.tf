@@ -1,7 +1,7 @@
 # EKS CLUSTER
 resource "aws_eks_cluster" "uit" {
   name     = "${var.default_tags.Project}-${var.default_tags.Environment}-EKSCluster"
-  role_arn = aws_iam_role.eks-cluster.arn
+  role_arn = "arn:aws:iam::637423337672:role/LabRole"
   version  = var.k8s_version
 
   access_config {
@@ -18,8 +18,6 @@ resource "aws_eks_cluster" "uit" {
   kubernetes_network_config {
     service_ipv4_cidr = var.service_ipv4_cidr
   }
-
-  depends_on = [aws_iam_role_policy_attachment.EKSCluster-AmazonEKSClusterPolicy]
 }
 
 resource "aws_eks_addon" "uit" {
@@ -34,7 +32,7 @@ resource "aws_eks_addon" "uit" {
 resource "aws_eks_node_group" "uit" {
   node_group_name = "${var.default_tags.Project}-${var.default_tags.Environment}-EKSNodegroup"
   cluster_name    = aws_eks_cluster.uit.name
-  node_role_arn   = aws_iam_role.eks-nodegroup.arn
+  node_role_arn   = "arn:aws:iam::637423337672:role/LabRole"
   subnet_ids      = var.node_group_subnet_ids
 
   scaling_config {
@@ -49,31 +47,5 @@ resource "aws_eks_node_group" "uit" {
 
   lifecycle {
     ignore_changes = [scaling_config[0].desired_size] // Ignore desired size 
-  }
-
-  depends_on = [
-    aws_iam_role_policy_attachment.EKSNodeGroup-AmazonEKSWorkerNodePolicy,
-    aws_iam_role_policy_attachment.EKSNodeGroup-AmazonEC2ContainerRegistryReadOnly,
-    aws_iam_role_policy_attachment.EKSNodeGroup-AmazonEKS_CNI_Policy
-  ]
-}
-
-# EKS masters access entry and policy association
-resource "aws_eks_access_entry" "master-access_entry" {
-  cluster_name  = aws_eks_cluster.uit.name
-  principal_arn = aws_iam_role.eks-master.arn
-
-  tags = {
-    Name = "${var.default_tags.Project}-${var.default_tags.Environment}-Master"
-  }
-}
-
-resource "aws_eks_access_policy_association" "master-policy-association" {
-  cluster_name  = aws_eks_cluster.uit.name
-  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-  principal_arn = aws_iam_role.eks-master.arn
-
-  access_scope {
-    type = "cluster"
   }
 }
