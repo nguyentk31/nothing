@@ -14,8 +14,8 @@ env:
   TF_CLI_ARGS: -no-color
   branch: ${{ github.base_ref }}
   environment: ${{ github.base_ref == 'main' && 'prod' || 'dev' }}
-  app_path: application
-  infra_path: infrastructure
+  app_path: test_app
+  infra_path: test_infra
 
 jobs:
   # Find file paths that trigger workflow
@@ -29,7 +29,7 @@ jobs:
       charts: ${{ steps.check.outputs.charts }}
       images: ${{ steps.check.outputs.images }}
     env:
-      paths_check: application infrastructure charts images
+      paths_check: test_app test_infra charts images
     steps:
       - name: Checkout code
         uses: actions/checkout@v4.1.1
